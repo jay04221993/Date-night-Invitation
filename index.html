@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Movie Date with Jay — For Nicole</title>
+  <style>
+    :root{
+      --accent:#ff6b81;
+      --bg1:#071024;
+      --bg2:#2b2340;
+      --text:#fbfbff;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
+      background: radial-gradient(ellipse at top left, rgba(255,107,129,0.06), transparent 20%),
+                  linear-gradient(135deg,var(--bg1),var(--bg2) 60%);
+      color:var(--text);padding:24px;
+    }
+    .card{
+      width:760px;max-width:96%;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.06));
+      border-radius:16px;padding:28px;box-shadow:0 12px 40px rgba(2,6,23,0.6);position:relative;overflow:hidden;
+      border:1px solid rgba(255,255,255,0.03);
+    }
+    h1{margin:0 0 8px;font-size:26px}
+    p.lead{margin:0 0 18px;color:rgba(248,250,252,0.85)}
+    .question-area{min-height:140px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+    .q-text{font-size:18px;text-align:center;max-width:86%}
+    .choices{display:flex;gap:12px;margin-top:8px;flex-wrap:wrap}
+    button.btn{
+      padding:10px 16px;border-radius:12px;border:none;background:rgba(255,255,255,0.03);color:var(--text);cursor:pointer;font-weight:700;
+      transition:transform .15s ease, background .15s ease;
+      box-shadow: 0 6px 18px rgba(2,6,23,0.45);
+    }
+    button.yes{background:linear-gradient(90deg,var(--accent),#ff9aa8);color:#fff}
+    button.no{background:rgba(255,255,255,0.03);color:#ffd6df}
+    button.alt{background:#ffcfde;color:#4b0018}
+    .hint{color:rgba(248,250,252,0.65);font-size:13px;margin-top:6px}
+    .mic{position:absolute;right:18px;top:-8px;width:84px;height:84px;pointer-events:none;transition:transform .35s,right .3s,top .3s}
+    .mic svg{width:100%;height:100%}
+    .wobble{animation:wob 900ms infinite ease-in-out}
+    @keyframes wob{0%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-6px) rotate(6deg)}100%{transform:translateY(0) rotate(-4deg)}}
+    .emoji-float{position:absolute;font-size:36px;pointer-events:none;transform:translateY(0);opacity:1;transition:transform 1s ease-out, opacity 1s}
+    .controls{display:flex;gap:12px;align-items:center;margin-top:18px;justify-content:center}
+    input[type="date"]{padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,0.03);color:var(--text);font-weight:700}
+    .final-msg{display:none;padding:18px;border-radius:12px;background:linear-gradient(90deg,#0b1220,#111827);text-align:center}
+    .final-msg.show{display:block}
+    .modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#071724;padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);z-index:60;min-width:300px;display:none}
+    .modal.show{display:block}
+    .modal p{margin:0 0 12px}
+    .footer-note{margin-top:12px;color:rgba(248,250,252,0.6);font-size:13px;text-align:center}
+    @media (max-width:480px){
+      .mic{display:none}
+      .card{padding:16px}
+    }
+  </style>
+</head>
+<body>
+  <div class="card" role="main" aria-labelledby="heading">
+    <div class="mic" id="micEl" aria-hidden="true">
+      <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="#ffd1de"/><stop offset="1" stop-color="#ff6b81"/></linearGradient>
+        </defs>
+        <g transform="translate(6,4)">
+          <rect x="12" y="2" width="18" height="32" rx="9" fill="url(#g1)"></rect>
+          <rect x="10" y="36" width="22" height="4" rx="2" fill="#ffd1de"></rect>
+          <rect x="6" y="42" width="30" height="4" rx="2" fill="#ffd1de"></rect>
+        </g>
+      </svg>
+    </div>
+
+    <h1 id="heading">A little game — just answer honestly, Nicole ✨</h1>
+    <p class="lead">I'll ask a few quick questions. Cute animations and a tiny chime when you say "Yes". If you say "No", I'll ask if you'd like to reconsider — but your answer is always respected.</p>
+
+    <div class="question-area" id="questionArea">
+      <!-- question text injected here -->
+      <div class="q-text" id="qText"></div>
+      <div class="choices" id="choiceRow"></div>
+      <div class="hint" id="hint"></div>
+    </div>
+
+    <div class="controls" id="controls">
+      <!-- date input shown for the date step -->
+    </div>
+
+    <div class="final-msg" id="finalMsg" role="status" aria-live="polite"></div>
+
+    <div class="footer-note">Tip: hover the "No" buttons for a playful mic — it's just flirting, not pressure. 💖</div>
+  </div>
+
+  <!-- modal used when user clicks No or clicks Horror -->
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-hidden="true">
+    <p id="modalText"></p>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn alt" id="modalAlt">Keep it</button>
+      <button class="btn yes" id="modalYes">Try Yes</button>
+    </div>
+  </div>
+
+<script>
+/*
+  Flow implemented:
+  Q1: Yes/No -> if No, modal asks "reconsider?" (Try Yes / Keep it)
+  Q2: Romantic / Horror -> if Horror, modal shows "You gonna scare him 😅" and offers to switch to Romantic or keep Horror
+  Q3: Date selection (only 2026-08-22 selectable)
+  End: If Romantic chosen and yes to Q1 (or user accepted on reconsider), show confirmation and chime + emoji.
+  If user keeps No or keeps Horror, the page still respects choice and shows a gentle message.
+*/
+
+(function(){
+  const questions = [
+    { id: 'q1', text: 'Nicole, would you like to go on a cozy movie date night with Jay?', type: 'yesno' },
+    { id: 'q2', text: 'Which movie type would you like to watch?', type: 'option', options: ['Romantic','Horror'] },
+    { id: 'q3', text: 'Pick a date for our movie night (only this date is available)', type: 'date', allowed: '2026-08-22' }
+  ];
+
+  const qText = document.getElementById('qText');
+  const choiceRow = document.getElementById('choiceRow');
+  const hint = document.getElementById('hint');
+  const controls = document.getElementById('controls');
+  const finalMsg = document.getElementById('finalMsg');
+  const mic = document.getElementById('micEl');
+
+  const modal = document.getElementById('modal');
+  const modalText = document.getElementById('modalText');
+  const modalYes = document.getElementById('modalYes');
+  const modalAlt = document.getElementById('modalAlt');
+
+  // store responses
+  const state = { q1: null, q2: null, q3: null };
+
+  let idx = 0; // question index
+
+  // small webaudio chime for Yes
+  function playChime(){
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = ctx.currentTime;
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(660, now);
+      g.gain.setValueAtTime(0, now);
+      g.gain.linearRampToValueAtTime(0.12, now + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.7);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(now);
+      o.frequency.exponentialRampToValueAtTime(880, now + 0.5);
+      o.stop(now + 0.8);
+    }catch(e){
+      // ignore if audio blocked
+    }
+  }
+
+  // show floating emoji
+  function floatEmoji(x,y,emoji){
+    const node = document.createElement('div');
+    node.className = 'emoji-float';
+    node.textContent = emoji;
+    document.body.appendChild(node);
+    node.style.left = (x - 18) + 'px';
+    node.style.top = (y - 24) + 'px';
+    // animate up and fade out
+    requestAnimationFrame(()=> {
+      node.style.transform = 'translateY(-80px) rotate(-10deg)';
+      node.style.opacity = '0';
+    });
+    setTimeout(()=> document.body.removeChild(node), 1100);
+  }
+
+  // animate mic toward an element
+  function moveMicToEl(el){
+    const rect = el.getBoundingClientRect();
+    const micX = Math.min(window.innerWidth - 80, rect.right + 8);
+    const micY = Math.max(6, rect.top - 12);
+    mic.style.right = (window.innerWidth - micX + 10) + 'px';
+    mic.style.top = (micY - 6) + 'px';
+    mic.classList.add('wobble');
+    setTimeout(()=> mic.classList.remove('wobble'), 900);
+  }
+
+  // show current question
+  function renderQuestion(i){
+    controls.innerHTML = '';
+    choiceRow.innerHTML = '';
+    hint.textContent = '';
+    finalMsg.classList.remove('show');
+    modal.setAttribute('aria-hidden','true'); modal.classList.remove('show');
+    if (i >= questions.length) {
+      finishFlow(); return;
+    }
+    const q = questions[i];
+    qText.textContent = q.text;
+
+    if (q.type === 'yesno') {
+      const yes = makeButton('Yes','yes');
+      const no = makeButton('No','no');
+      choiceRow.appendChild(yes); choiceRow.appendChild(no);
+      yes.addEventListener('click', ()=> handleYes(q.id, yes));
+      no.addEventListener('click', ()=> handleNo(q.id, no));
+      // playful mic on hover of No
+      no.addEventListener('mouseenter', ()=> moveMicToEl(no));
+    } else if (q.type === 'option') {
+      // present options as buttons
+      q.options.forEach(opt=>{
+        const btn = makeButton(opt, 'option');
+        choiceRow.appendChild(btn);
+        btn.addEventListener('click', ()=> handleOption(q.id, opt, btn));
+        // if Horror, hovering gives small mic wobble
+        if (opt === 'Horror') btn.addEventListener('mouseenter', ()=> mic.classList.add('wobble') );
+        if (opt === 'Horror') btn.addEventListener('mouseleave', ()=> mic.classList.remove('wobble') );
+      });
+      hint.textContent = 'Tip: pick what you feel like — both are fine (but I hope for Romantic!).';
+    } else if (q.type === 'date') {
+      // input limited to allowed date
+      const label = document.createElement('label');
+      label.textContent = '';
+      const input = document.createElement('input');
+      input.type = 'date';
+      input.value = q.allowed;
+      input.min = q.allowed;
+      input.max = q.allowed;
+      input.id = 'theDate';
+      input.setAttribute('aria-label','Pick date (only 2026-08-22 is available)');
+      controls.appendChild(input);
+      const confirm = makeButton('Select date','yes');
+      controls.appendChild(confirm);
+      confirm.addEventListener('click', ()=> {
+        // ensure value equals allowed
+        if (input.value !== q.allowed) {
+          // playful nudge
+          moveMicToEl(input);
+          showModal("I picked the perfect day: 2026-08-22. Want that date for our movie night?", "Keep it", "Try Yes", ()=>{
+            // Keep it -> set it
+            input.value = q.allowed;
+            state.q3 = q.allowed;
+            nextQuestion();
+          }, () => {
+            // Try Yes -> set and proceed
+            input.value = q.allowed;
+            state.q3 = q.allowed;
+            playYesEffects();
+            nextQuestion();
+          });
+          return;
+        }
+        state.q3 = input.value;
+        playYesEffects();
+        nextQuestion();
+      });
+    }
+  }
+
+  // helpers
+  function makeButton(text, cls){
+    const b = document.createElement('button');
+    b.className = 'btn ' + cls;
+    b.textContent = text;
+    b.type = 'button';
+    b.setAttribute('aria-label', text);
+    b.addEventListener('mousedown', ()=> b.style.transform = 'scale(.98)');
+    b.addEventListener('mouseup', ()=> b.style.transform = 'scale(1)');
+    return b;
+  }
+
+  function handleYes(qid, btn){
+    state[qid] = 'yes';
+    playYesEffects(btn);
+    nextQuestion();
+  }
+
+  function handleNo(qid, btn){
+    // show modal asking to reconsider before proceeding
+    showModal("I respect your answer — want to take a second thought?", "Keep No", "Try Yes",
+      // Keep No callback
+      () => {
+        state[qid] = 'no';
+        // gentle message shown inline then proceed
+        showInlineHint("Thanks for being honest — I appreciate it. We'll still be cool either way 💙");
+        nextQuestion();
+      },
+      // Try Yes callback
+      () => {
+        state[qid] = 'yes';
+        playYesEffects(btn);
+        nextQuestion();
+      }
+    );
+  }
+
+  function handleOption(qid, opt, btn){
+    if (opt === 'Romantic') {
+      state[qid] = 'Romantic';
+      playYesEffects(btn,'💞');
+      nextQuestion();
+      return;
+    }
+    // Horror chosen: playful message and offer to switch to Romantic
+    showModal("You gonna scare him 😅 — want to switch to Romantic for the date?", "Keep Horror", "Switch to Romantic",
+      () => {
+        // Keep Horror
+        state[qid] = 'Horror';
+        showInlineHint("Alright — spooky night it is! If you change your mind, you can pick Romantic.");
+        nextQuestion();
+      },
+      () => {
+        // Switch to Romantic
+        state[qid] = 'Romantic';
+        playYesEffects(btn,'💘');
+        nextQuestion();
+      }
+    );
+  }
+
+  function nextQuestion(){
+    idx++;
+    renderQuestion(idx);
+  }
+
+  function showInlineHint(text){
+    hint.textContent = text;
+    setTimeout(()=> {
+      // gently clear after a bit
+      if (hint.textContent === text) hint.textContent = '';
+    }, 4200);
+  }
+
+  // modal show helper: altLabel/yesLabel and callbacks
+  function showModal(text, altLabel, yesLabel, altCb, yesCb){
+    modalText.textContent = text;
+    modalAlt.textContent = altLabel;
+    modalYes.textContent = yesLabel;
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden','false');
+
+    function cleanup(){
+      modal.classList.remove('show');
+      modal.setAttribute('aria-hidden','true');
+      modalAlt.removeEventListener('click', onAlt);
+      modalYes.removeEventListener('click', onYes);
+    }
+    function onAlt(){
+      cleanup();
+      if (typeof altCb === 'function') altCb();
+    }
+    function onYes(){
+      cleanup();
+      if (typeof yesCb === 'function') yesCb();
+    }
+    modalAlt.addEventListener('click', onAlt);
+    modalYes.addEventListener('click', onYes);
+  }
+
+  function playYesEffects(el, emoji){
+    // play chime
+    playChime();
+    // show emoji near clicked element or center
+    const rect = (el && el.getBoundingClientRect && el.getBoundingClientRect()) || {left: window.innerWidth/2, top: window.innerHeight/2, width:36};
+    floatEmoji(rect.left + rect.width/2, rect.top + 18, emoji || '❤️');
+    // small mic wobble
+    mic.classList.add('wobble');
+    setTimeout(()=> mic.classList.remove('wobble'), 900);
+    // small inline affirm message
+    showInlineHint("Yay! 😊");
+  }
+
+  function finishFlow(){
+    // Build final messages based on responses
+    const q1 = state.q1;
+    const q2 = state.q2;
+    const q3 = state.q3;
+    // If everything positive (q1 yes, q2 Romantic, date chosen), show confirmation
+    if (q1 === 'yes' && q2 === 'Romantic' && q3 === '2026-08-22') {
+      finalMsg.innerHTML = `<strong style="font-size:16px">Your movie date with Jay is confirmed — start preparing for it, smile now 🙂🍿</strong><div style="margin-top:10px">Hey Nicole, enjoy your romantic date with Jay. 💖</div>`;
+      finalMsg.classList.add('show');
+      // extra hearts and chime
+      for (let i=0;i<6;i++) setTimeout(()=> floatEmoji(window.innerWidth/2 + (Math.random()*200-100), window.innerHeight/2 - 40 + Math.random()*40, '💖'), i*120);
+      playChime();
+    } else {
+      // respectful alternate message
+      let parts = [];
+      if (q1 !== 'yes') parts.push("Thanks for your honest answer about joining Jay.");
+      if (q2 !== 'Romantic') parts.push("You chose a different movie type — that's totally fine.");
+      if (q3 !== '2026-08-22') parts.push("The date wasn't selected.");
+      parts.push("If you change your mind, Jay would be delighted — no pressure. 💙");
+      finalMsg.innerHTML = `<div style="font-size:15px">${parts.join(' ')}</div>`;
+      finalMsg.classList.add('show');
+      showInlineHint("Thanks for going through this — whatever you chose is respected.");
+    }
+  }
+
+  // initialize
+  renderQuestion(idx);
+
+  // accessibility: allow escape to close modal
+  document.addEventListener('keydown', (e)=> {
+    if (e.key === 'Escape' && modal.classList.contains('show')){
+      modal.classList.remove('show'); modal.setAttribute('aria-hidden','true');
+    }
+  });
+
+  // keep mic positioned initially
+  mic.style.right = '18px';
+  mic.style.top = '-8px';
+
+})();
+</script>
+</body>
+</html>
